@@ -144,7 +144,7 @@ endian = 'little'
 
 #baixando patch wsi
 
-wget https://github.com/OpomboMORTO/fex-acclan/blob/d236feac56828ef78c326b1c057d0ff523142ff1/patch/wsi/wsi-termux-x11-v3.patch
+wget https://github.com/OpomboMORTO/fex-acclan/raw/main/patch/wsi/wsi-termux-x11-v3.patch
 
 #baixando wsi_x11.c
 
