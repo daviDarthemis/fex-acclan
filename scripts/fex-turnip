@@ -1,0 +1,156 @@
+#!/bin/bash
+
+#configurando dns
+
+echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
+
+#atualizando base
+
+apt update
+
+apt upgrade 
+
+#adicionadno debs
+
+echo "
+deb http://ports.ubuntu.com/ubuntu-ports jammy main restricted universe multiverse
+deb-src http://ports.ubuntu.com/ubuntu-ports jammy main restricted universe multiverse
+
+deb http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted universe multiverse
+deb-src http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted universe multiverse
+
+deb http://ports.ubuntu.com/ubuntu-ports jammy-backports main restricted universe multiverse
+deb-src http://ports.ubuntu.com/ubuntu-ports jammy-backports main restricted universe multiverse
+
+deb http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted universe multiverse
+deb-src http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted universe multiverse
+" > /etc/apt/sources.list
+
+#adicionando arch armhf
+
+dpkg --add-architecture armhf
+apt update
+apt upgrade
+
+#instalando pacotes nescessarios 
+
+apt build-dep mesa && apt install sudo clinfo make cmake git wget vulkan-tools mesa-utils g++-arm-linux-gnueabihf g++-aarch64-linux-gnu
+
+
+#armhf
+apt install libxext-dev:armhf libx11-dev:armhf x11proto-gl-dev:armhf zlib1g-dev:armhf libexpat1-dev:armhf libdrm-dev:armhf libx11-dev:armhf libx11-xcb-dev:armhf libxext-dev:armhf libxdamage-dev:armhf libxcb-glx0-dev:armhf libxcb-dri2-0-dev:armhf libxcb-dri3-dev:armhf libxcb-shm0-dev:armhf libxcb-present-dev:armhf libxshmfence-dev:armhf libxxf86vm-dev:armhf libxrandr-dev:armhf libwayland-dev:armhf wayland-protocols:armhf libwayland-egl-backend-dev:armhf 
+#arm64
+apt install libxext-dev:arm64 libx11-dev:arm64 x11proto-gl-dev:arm64 zlib1g-dev:arm64 libexpat1-dev:arm64 libdrm-dev:arm64 libx11-dev:arm64 libx11-xcb-dev:arm64 libxext-dev:arm64 libxdamage-dev:arm64 libxcb-glx0-dev:arm64 libxcb-dri2-0-dev:arm64 libxcb-dri3-dev:arm64 libxcb-shm0-dev:arm64 libxcb-present-dev:arm64 libxshmfence-dev:arm64 libxxf86vm-dev:arm64 libxrandr-dev:arm64 libwayland-dev:arm64 wayland-protocols:arm64 libwayland-egl-backend-dev:arm64  
+
+#baixando lvngl======================================================================================
+
+wget https://gitlab.freedesktop.org/glvnd/libglvnd/-/archive/v1.7.0/libglvnd-v1.7.0.tar.gz
+tar -xf libglvnd-v1.7.0.tar.gz
+rm libglvnd-v1.7.0.tar.gz
+cd libglvnd-v1.7.0
+
+#cross-armhf
+
+echo "\
+[binaries]
+c = 'arm-linux-gnueabihf-gcc'
+
+cpp = 'arm-linux-gnueabihf-g++'
+ar = 'arm-linux-gnueabihf-ar'
+strip = 'arm-linux-gnueabihf-strip'
+pkgconfig = 'arm-linux-gnueabihf-pkg-config'
+
+[host_machine]
+system = 'linux'
+cpu_family = 'arm'
+cpu = 'armv7l'
+endian = 'little'
+" > arm.txt
+
+#compilando lvngl
+
+#arm64
+meson build64/ --prefix /usr  -D x11=enabled -D egl=true -D glx=enabled
+ninja -C build64
+ninja install -C build64
+#armhf
+meson build32/ --cross-file arm.txt --prefix /usr  -D x11=enabled -D egl=true -D glx=enabled
+ninja -C build32
+ninja install -C build32
+
+cd $HOME
+
+rm -r libglvnd-v1.7.0
+
+#baixando drm========================================================================================
+
+wget https://gitlab.freedesktop.org/mesa/drm/-/archive/libdrm-2.4.116/drm-libdrm-2.4.116.tar.gz
+tar -xf drm-libdrm-2.4.116.tar.gz
+rm drm-libdrm-2.4.116.tar.gz
+cd drm-libdrm-2.4.116
+
+#compilando drm
+
+meson build64 --prefix /usr -D freedreno=enabled -D freedreno-kgsl=true
+ninja -C build64
+ninja install build64
+
+#copiando drm
+
+cp /usr/include/libdrm/drm.h /usr/include/libdrm/drm_mode.h /usr/include/
+
+cd $HOME
+
+rm -r drm-libdrm-2.4.116
+
+#baixando wayland====================================================================================
+
+#wget https://gitlab.freedesktop.org/wayland/wayland/-/archive/main/wayland-main.tar.gz
+#tar -xf wayland-main.tar.gz
+#rm wayland-main.tar.gz
+#cd wayland-main
+
+#baixando wayland-protocol===========================================================================
+
+#wget https://gitlab.freedesktop.org/wayland/wayland-protocols/-/archive/main/wayland-protocols-main.tar.gz
+#tar -xf wayland-protocols-main.tar.gz
+#rm wayland-protocols-main.tar.gz
+#cd wayland-protocols-main
+
+#baixando mesa 22.02.cr3==============================================================================
+
+wget  https://gitlab.freedesktop.org/mesa/mesa/-/archive/mesa-23.2.0-rc3/mesa-mesa-23.2.0-rc3.tar.gz
+tar -xf mesa-mesa-23.2.0-rc3.tar.gz
+rm mesa-mesa-23.2.0-rc3.tar.gz
+cd mesa-mesa-23.2.0-rc3
+
+#compilando mesa turnip
+
+echo "\
+[binaries]
+c = 'arm-linux-gnueabihf-gcc'
+
+cpp = 'arm-linux-gnueabihf-g++'
+ar = 'arm-linux-gnueabihf-ar'
+strip = 'arm-linux-gnueabihf-strip'
+pkgconfig = 'arm-linux-gnueabihf-pkg-config'
+
+[host_machine]
+system = 'linux'
+cpu_family = 'arm'
+cpu = 'armv7l'
+endian = 'little'
+" > arm.txt
+
+#cross-arm64
+
+meson build64/ --prefix /usr --libdir lib/aarch64-linux-gnu/ -D platforms=x11 -D gallium-drivers=swrast,virgl,zink,freedreno -D vulkan-drivers=freedreno -D dri3=enabled -D egl=enabled -D gles2=enabled -D glvnd=true -D glx=dri -D libunwind=disabled -D osmesa=true -D shared-glapi=enabled -D microsoft-clc=disabled -D valgrind=disabled -D gles1=disabled -D freedreno-kmds=kgsl,msm -D gallium-extra-hud=true -D glx-direct=true -D vulkan-beta=true -D buildtype=release
+ninja -C build64
+ninja install -C build64
+
+#cross-armhf
+
+meson build32/ --cross-file arm.txt --prefix /usr --libdir lib/arm-linux-gnueabihf/ -D platforms=x11 -D gallium-drivers=swrast,virgl,zink,freedreno -D vulkan-drivers=freedreno -D dri3=enabled -D egl=enabled -D gles2=enabled -D glvnd=true -D glx=dri -D libunwind=disabled -D osmesa=true -D shared-glapi=enabled -D microsoft-clc=disabled -D valgrind=disabled -D gles1=disabled -D freedreno-kmds=kgsl,msm -D gallium-extra-hud=true -D glx-direct=true -D vulkan-beta=true -D buildtype=release
+ninja -C build32
+ninja install -C build32
+
