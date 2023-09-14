@@ -148,7 +148,7 @@ wget https://github.com/OpomboMORTO/fex-acclan/raw/main/patch/wsi/wsi-termux-x11
 
 #baixando wsi_x11.c
 
-wget https://github.com/OpomboMORTO/fex-acclan/blob/d236feac56828ef78c326b1c057d0ff523142ff1/patch/wsi/wsi_common_x11.c
+wget https://github.com/OpomboMORTO/fex-acclan/raw/main/patch/wsi/wsi_common_x11.c
 
 #aplicando wsi_/patch
 
