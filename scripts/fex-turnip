@@ -142,6 +142,14 @@ cpu = 'armv7l'
 endian = 'little'
 " > arm.txt
 
+#baixando patch wsi
+
+wget https://github.com/OpomboMORTO/fex-acclan/blob/d236feac56828ef78c326b1c057d0ff523142ff1/patch/wsi/wsi-termux-x11-v3.patch
+
+#baixando wsi_x11.c
+
+wget https://github.com/OpomboMORTO/fex-acclan/blob/d236feac56828ef78c326b1c057d0ff523142ff1/patch/wsi/wsi_common_x11.c
+
 #cross-arm64
 
 meson build64/ --prefix /usr --libdir lib/aarch64-linux-gnu/ -D platforms=x11 -D gallium-drivers=swrast,virgl,zink,freedreno -D vulkan-drivers=freedreno -D dri3=enabled -D egl=enabled -D gles2=enabled -D glvnd=true -D glx=dri -D libunwind=disabled -D osmesa=true -D shared-glapi=enabled -D microsoft-clc=disabled -D valgrind=disabled -D gles1=disabled -D freedreno-kmds=kgsl,msm -D gallium-extra-hud=true -D glx-direct=true -D vulkan-beta=true -D buildtype=release
