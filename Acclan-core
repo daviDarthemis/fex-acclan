@@ -117,14 +117,6 @@ rm -r drm-libdrm-2.4.116
 #rm wayland-protocols-main.tar.gz
 #cd wayland-protocols-main
 
-#baixando gles4=======================================================================================
-
-git clone https://github.com/ptitSeb/gl4es
-cd gl4es
-mkdir build; cd build; cmake -S ../../gl4es; make install
-cd $HOME
-rm -r gles4
-
 #baixando mesa 22.02.cr3==============================================================================
 
 wget  https://gitlab.freedesktop.org/mesa/mesa/-/archive/mesa-23.2.0-rc3/mesa-mesa-23.2.0-rc3.tar.gz
@@ -168,10 +160,32 @@ cp -r wsi_common_x11.c src/vulkan/wsi/
 
 meson build64/ --prefix /usr --libdir lib/aarch64-linux-gnu/ -D platforms=x11 -D gallium-drivers=swrast,virgl,zink,freedreno -D vulkan-drivers=freedreno -D dri3=enabled -D egl=enabled -D gles2=enabled -D glvnd=true -D glx=dri -D libunwind=disabled -D osmesa=true -D shared-glapi=enabled -D microsoft-clc=disabled -D valgrind=disabled -D gles1=disabled -D freedreno-kmds=kgsl,msm -D gallium-extra-hud=true -D glx-direct=true -D vulkan-beta=true -D buildtype=release
 ninja -C build64
-ninja install -C build64
+#ninja install -C build64
 
 #cross-armhf
 
 meson build32/ --cross-file arm.txt --prefix /usr --libdir lib/arm-linux-gnueabihf/ -D platforms=x11 -D gallium-drivers=swrast,virgl,zink,freedreno -D vulkan-drivers=freedreno -D dri3=enabled -D egl=enabled -D gles2=enabled -D glvnd=true -D glx=dri -D libunwind=disabled -D osmesa=true -D shared-glapi=enabled -D microsoft-clc=disabled -D valgrind=disabled -D gles1=disabled -D freedreno-kmds=kgsl,msm -D gallium-extra-hud=true -D glx-direct=true -D vulkan-beta=true -D buildtype=release
 ninja -C build32
+#ninja install -C build32
+
+#compilando mesa Xlib
+
+meson Xlib/ --prefix /usr --libdir lib/aarch64-linux-gnu/ -D platforms=x11 -D gallium-drivers=swrast,virgl,zink,freedreno -D vulkan-drivers=freedreno -D dri3=enabled -D egl=enabled -D gles2=enabled -D glvnd=true -D glx=dri -D libunwind=disabled -D osmesa=true -D shared-glapi=enabled -D microsoft-clc=disabled -D valgrind=disabled -D gles1=disabled -D freedreno-kmds=kgsl,msm -D gallium-extra-hud=true -D glx-direct=true -D vulkan-beta=true -D buildtype=release
+ninja -C build64
+ninja install -C Xlib
+ninja install -C build64
+
+meson Xlib32/ --cross-file arm.txt --prefix /usr --libdir lib/arm-linux-gnueabihf/ -D platforms=x11 -D gallium-drivers=swrast,virgl,zink,freedreno -D vulkan-drivers=freedreno -D dri3=enabled -D egl=enabled -D gles2=enabled -D glvnd=true -D glx=dri -D libunwind=disabled -D osmesa=true -D shared-glapi=enabled -D microsoft-clc=disabled -D valgrind=disabled -D gles1=disabled -D freedreno-kmds=kgsl,msm -D gallium-extra-hud=true -D glx-direct=true -D vulkan-beta=true -D buildtype=release
+ninja -C build32
+ninja install -C Xlib32
 ninja install -C build32
+
+#baixando gles4=======================================================================================
+
+git clone https://github.com/ptitSeb/gl4es
+cd gl4es
+mkdir build; cd build; cmake -S ../../gl4es; make install
+cd $HOME
+rm -r gles4
+
+#gerando flags========================================================================================
