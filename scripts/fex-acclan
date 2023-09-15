@@ -8,7 +8,7 @@ echo "|   _____________________________________    | \ "
 echo "|   |   _______________|________   |  - ×|   |  \ "
 echo "|   |   |•___________________- ×|  |     |   |   \ "
 echo "|   |   |                       |  |     |   |    |"
-echo "|   |   | BEM VINDO AO FEX      |  |     |   |    |"
+echo "|   |   | BEM VINDO AO ACCLAN   |  |     |   |    |"
 echo "|   |   |                       |__|     |   |\   |"
 echo "|   |   | VERSAO :13.09.23      ||       |   | \  |"
 echo "|   |   |                       ||       |   |  \ |"
@@ -31,11 +31,11 @@ echo "|   _____________________________________    | \ "
 echo "|   |   _______________|________   |  - ×|   |  \ "
 echo "|   |   |•___________________- ×|  |     |   |   \ "
 echo "|   |   |                       |  |     |   |    |"
-echo "|   |   | INSTALAR FEX          |  |     |   |    |"
+echo "|   |   | INSTALAR              |  |     |   |    |"
 echo "|   |   |                       |__|     |   |\   |"
-echo "|   |   | 1 CHROOT FEX           ||       |   | \  |"
+echo "|   |   | 1 CHROOT              ||       |   | \  |"
 echo "|   |   |                       ||       |   |  \ |"
-echo "|   |   | 2 PROOT FEX           ||       |   |   \|"
+echo "|   |   | 2 PROOT               ||       |   |   \|"
 echo "|   |   |_______________________||       |   |    |"
 echo "|   |     '----------------------'       |   |    |"
 echo "|   |                    0 -  DESLIGAR   |   |    |"
@@ -248,8 +248,8 @@ echo "=================================================="
 
 if [ $opcao = 1 ]
 then
-       sudo mkdir ~/Fex
-       sudo tar  -xzvf ubuntu-base-22.04-base-arm64.tar.gz -C ~/Fex &>/dev/null
+       sudo mkdir ~/ACCLAN
+       sudo tar  -xzvf ubuntu-base-22.04-base-arm64.tar.gz -C ~/ACCLAN &>/dev/null
 elif [ $opcao = 2 ]
 then
        proot-distro restore ubuntu-base-22.04-base-arm64.tar.gz &>/dev/null
@@ -278,7 +278,7 @@ echo "=================================================="
 
 curl -O https://raw.githubusercontent.com/OpomboMORTO/FEX-android/main/Scripts/fex &>/dev/null
 chmod +x fex
-mv fex $PREFIX/bin &>/dev/null
+mv acclan $PREFIX/bin &>/dev/null
 
 #rm -rf instalador-Fex.sh &>/dev/null
 
