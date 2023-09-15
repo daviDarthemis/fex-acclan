@@ -1,2 +1,3 @@
-# acclan-wine
-Um dos melhores vinhos do mundo 
+# acclan-core
+
+aceleração gráfica via ES
