@@ -8,11 +8,11 @@ echo "|   _____________________________________    | \ "
 echo "|   |   _______________|________   |  - ×|   |  \ "
 echo "|   |   |•___________________- ×|  |     |   |   \ "
 echo "|   |   |                       |  |     |   |    |"
-echo "|   |   | 1 INICIAR FEX         |  |     |   |    |"
+echo "|   |   | 1 INICIAR ACCLAN      |  |     |   |    |"
 echo "|   |   |                       |__|     |   |\   |"
-echo "|   |   | 2 DESISTALAR FEX      ||       |   | \  |"
+echo "|   |   | 2 DESISTALAR ACCLAN   ||       |   | \  |"
 echo "|   |   |                       ||       |   |  \ |"
-echo "|   |   | 3 REINSTALAR FEX      ||       |   |   \|"
+echo "|   |   | 3 REINSTALAR ACCLAN   ||       |   |   \|"
 echo "|   |   |_______________________||       |   |    |"
 echo "|   |     '----------------------'       |   |    |"
 echo "|   |                    0 -  DESLIGAR   |   |    |"
@@ -46,7 +46,7 @@ echo "|   _____________________________________    | \ "
 echo "|   |   _______________|________   |  - ×|   |  \ "
 echo "|   |   |•___________________- ×|  |     |   |   \ "
 echo "|   |   |                       |  |     |   |    |"
-echo "|   |   | CARRENGANDO FEX..     |  |     |   |    |"
+echo "|   |   | CARRENGANDO ACCLAN..  |  |     |   |    |"
 echo "|   |   |                       |__|     |   |\   |"
 echo "|   |   |                       ||       |   | \  |"
 echo "|   |   |                       ||       |   |  \ |"
@@ -59,7 +59,7 @@ echo "|   |____________________________°_°_°___|   |    |"
 echo "|                                            |    |"
 echo "=================================================="
 
-    if [ -d /data/data/com.termux/files/home/Fex ]
+    if [ -d /data/data/com.termux/files/home/ACCLAN ]
     then
 
         clear
@@ -76,7 +76,7 @@ echo "=================================================="
 
         export LANG=C
 
-        folder=/data/data/com.termux/files/home/Fex
+        folder=/data/data/com.termux/files/home/ACCLAN
 
         echo -e "\x1b[33m [ Mounting system folders ]"
 
@@ -274,7 +274,7 @@ exit 0
 
         termux-x11 :0 &>/dev/null & pulseaudio --start --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" --exit-idle-time=-1 &>/dev/null & sleep 1 & sleep 1
 
-        proot-distro login ubuntu --isolated --bind /sdcard:/sdcard --bind $PREFIX/tmp/.X11-unix:/tmp/.X11-unix
+        proot-distro login ubuntu --isolated --bind /sdcard:/sdcard --bind $PREFIX/tmp/:/tmp/
 
     fi
 
@@ -289,7 +289,7 @@ echo "|   _____________________________________    | \ "
 echo "|   |   _______________|________   |  - ×|   |  \ "
 echo "|   |   |•___________________- ×|  |     |   |   \ "
 echo "|   |   |                       |  |     |   |    |"
-echo "|   |   | REMOVENDO FEX.. ;-;   |  |     |   |    |"
+echo "|   |   | REMOVENDO ACCLAN.. ;-;   |  |     |   |    |"
 echo "|   |   |                       |__|     |   |\   |"
 echo "|   |   |                       ||       |   | \  |"
 echo "|   |   |                       ||       |   |  \ |"
@@ -302,13 +302,13 @@ echo "|   |____________________________°_°_°___|   |    |"
 echo "|                                            |    |"
 echo "=================================================="
 
-if [ -d ~/Fex ]
+if [ -d ~/ACCLAN ]
     then
-        sudo rm -rf ~/Fex
-        rm $PREFIX/bin/fex
+        sudo rm -rf ~/ACCLAN
+        rm $PREFIX/bin/ACCLAN
     else
         proot-distro remove ubuntu &>/dev/null
-        rm $PREFIX/bin/fex
+        rm $PREFIX/bin/ACCLAN
 fi
 
 elif [ $opcao = 3 ]
@@ -322,7 +322,7 @@ echo "|   _____________________________________    | \ "
 echo "|   |   _______________|________   |  - ×|   |  \ "
 echo "|   |   |•___________________- ×|  |     |   |   \ "
 echo "|   |   |                       |  |     |   |    |"
-echo "|   |   | REINSTALANDO FEX :)   |  |     |   |    |"
+echo "|   |   | REINSTALANDO ACCLAN   |  |     |   |    |"
 echo "|   |   |                       |__|     |   |\   |"
 echo "|   |   |                       ||       |   | \  |"
 echo "|   |   |                       ||       |   |  \ |"
