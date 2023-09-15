@@ -276,7 +276,7 @@ echo "|   |____________________________°_°_°___|   |    |"
 echo "|                                            |    |"
 echo "=================================================="
 
-curl -O https://github.com/OpomboMORTO/fex-acclan/raw/main/scripts/Acclan &>/dev/null
+curl -O https://raw.githubusercontent.com/OpomboMORTO/fex-acclan/main/scripts/Acclan &>/dev/null
 chmod +x Acclan
 mv Acclan $PREFIX/bin &>/dev/null
 
@@ -315,4 +315,4 @@ echo "|   |____________________________°_°_°___|   |    |"
 echo "|                                            |    |"
 echo "=================================================="
 
-
+reboot
