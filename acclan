@@ -276,11 +276,11 @@ echo "|   |____________________________°_°_°___|   |    |"
 echo "|                                            |    |"
 echo "=================================================="
 
-curl -O https://raw.githubusercontent.com/OpomboMORTO/FEX-android/main/Scripts/fex &>/dev/null
-chmod +x fex
-mv acclan $PREFIX/bin &>/dev/null
+curl -O https://github.com/OpomboMORTO/fex-acclan/raw/main/scripts/Acclan &>/dev/null
+chmod +x Acclan
+mv Acclan $PREFIX/bin &>/dev/null
 
-#rm -rf instalador-Fex.sh &>/dev/null
+#rm -rf acclan &>/dev/null
 
 if [ $opcao = 1 ]
 then
