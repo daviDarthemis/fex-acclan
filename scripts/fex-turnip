@@ -93,7 +93,7 @@ cd drm-libdrm-2.4.116
 
 meson build64 --prefix /usr -D freedreno=enabled -D freedreno-kgsl=true
 ninja -C build64
-ninja install build64
+ninja install -C build64
 
 #copiando drm
 
