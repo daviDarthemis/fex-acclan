@@ -192,3 +192,12 @@ cd $HOME
 rm -r gles4
 
 #gerando flags========================================================================================
+
+#gerando diretórios 
+
+mkdir /opt/.tmp/
+chmod 777 /opt/.tpm
+
+#baixando .bin // arquivo de flags
+
+echo '. /opt/.tmp/.bin' >> ~/.bashrc/
