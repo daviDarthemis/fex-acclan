@@ -160,25 +160,25 @@ cp -r wsi_common_x11.c src/vulkan/wsi/
 
 meson build64/ --prefix /usr --libdir lib/aarch64-linux-gnu/ -D platforms=x11 -D gallium-drivers=swrast,virgl,zink,freedreno -D vulkan-drivers=freedreno -D dri3=enabled -D egl=enabled -D gles2=enabled -D glvnd=true -D glx=dri -D libunwind=disabled -D osmesa=true -D shared-glapi=enabled -D microsoft-clc=disabled -D valgrind=disabled -D gles1=disabled -D freedreno-kmds=kgsl,msm -D gallium-extra-hud=true -D glx-direct=true -D vulkan-beta=true -D buildtype=release
 ninja -C build64
-#ninja install -C build64
+ninja install -C build64
 
 #cross-armhf
 
 meson build32/ --cross-file arm.txt --prefix /usr --libdir lib/arm-linux-gnueabihf/ -D platforms=x11 -D gallium-drivers=swrast,virgl,zink,freedreno -D vulkan-drivers=freedreno -D dri3=enabled -D egl=enabled -D gles2=enabled -D glvnd=true -D glx=dri -D libunwind=disabled -D osmesa=true -D shared-glapi=enabled -D microsoft-clc=disabled -D valgrind=disabled -D gles1=disabled -D freedreno-kmds=kgsl,msm -D gallium-extra-hud=true -D glx-direct=true -D vulkan-beta=true -D buildtype=release
 ninja -C build32
-#ninja install -C build32
+ninja install -C build32
 
 #compilando mesa Xlib
 
-meson Xlib/ --prefix /usr --libdir lib/aarch64-linux-gnu/ -D gbm=enabled -D opengl=true -D egl=enabled -D egl-native-platform=x11 -D gles1=disabled -D gles2=enabled -D dri3=enabled -D glx=dri -D llvm=enabled -D shared-llvm=disabled -D platforms=x11 -D gallium-drivers=swrast,virgl,zink -D vulkan-drivers= -D osmesa=true -D glvnd=true -D xmlconfig=disabled -D gallium-opencl=icd
-ninja -C build64
-ninja install -C Xlib
-ninja install -C build64
+#meson Xlib/ --prefix /usr --libdir lib/aarch64-linux-gnu/ -D gbm=enabled -D opengl=true -D egl=enabled -D egl-native-platform=x11 -D gles1=disabled -D gles2=enabled -D dri3=enabled -D glx=dri -D llvm=enabled -D shared-llvm=disabled -D platforms=x11 -D gallium-drivers=swrast,virgl,zink -D vulkan-drivers= -D osmesa=true -D glvnd=true -D xmlconfig=disabled -D gallium-opencl=icd
+#ninja -C build64
+#ninja install -C Xlib
+#ninja install -C build64
 
-meson Xlib32/ --cross-file arm.txt --prefix /usr --libdir lib/arm-linux-gnueabihf -D gbm=enabled -D opengl=true -D egl=enabled -D egl-native-platform=x11 -D gles1=disabled -D gles2=enabled -D dri3=enabled -D glx=dri -D llvm=enabled -D shared-llvm=disabled -D platforms=x11 -D gallium-drivers=swrast,virgl,zink -D vulkan-drivers= -D osmesa=true -D glvnd=true -D xmlconfig=disabled -D gallium-opencl=icd
-ninja -C build32
-ninja install -C Xlib32
-ninja install -C build32
+#meson Xlib32/ --cross-file arm.txt --prefix /usr --libdir lib/arm-linux-gnueabihf -D gbm=enabled -D opengl=true -D egl=enabled -D egl-native-platform=x11 -D gles1=disabled -D gles2=enabled -D dri3=enabled -D glx=dri -D llvm=enabled -D shared-llvm=disabled -D platforms=x11 -D gallium-drivers=swrast,virgl,zink -D vulkan-drivers= -D osmesa=true -D glvnd=true -D xmlconfig=disabled -D gallium-opencl=icd
+#ninja -C build32
+#ninja install -C Xlib32
+#ninja install -C build32
 
 cd $HOME
 rm -r mesa-mesa-23.2.0-rc3
