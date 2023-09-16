@@ -196,8 +196,13 @@ rm -r gles4
 #gerando diretórios 
 
 mkdir /opt/.tmp/
-chmod 777 /opt/.tpm
+touch /opt/.tmp0
+chmod 777 /opt/.tmp
+chmod 777 /opt/.tmp0
 
 #baixando .bin // arquivo de flags
 
+echo 'cp /opt/.tmp/.exp /opt/.tmp/.exp' >> /opt/.tmp0
+
 echo '. /opt/.tmp/.bin' >> ~/.bashrc/
+echo '. /opt/.tmp0' >> ~/.bashrc/
