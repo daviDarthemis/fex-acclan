@@ -8,11 +8,11 @@ echo "|   _____________________________________    | \ "
 echo "|   |   _______________|________   |  - ×|   |  \ "
 echo "|   |   |•___________________- ×|  |     |   |   \ "
 echo "|   |   |                       |  |     |   |    |"
-echo "|   |   | 1 INICIAR ACCLAN      |  |     |   |    |"
+echo "|   |   | 1 INICIAR ROOTFSEMPTY |  |     |   |    |"
 echo "|   |   |                       |__|     |   |\   |"
-echo "|   |   | 2 DESISTALAR ACCLAN   ||       |   | \  |"
+echo "|   |   | 2 EXCLUIR ROOTFSEMPTY ||       |   | \  |"
 echo "|   |   |                       ||       |   |  \ |"
-echo "|   |   | 3 REINSTALAR ACCLAN   ||       |   |   \|"
+echo "|   |   |                       ||       |   |   \|"
 echo "|   |   |_______________________||       |   |    |"
 echo "|   |     '----------------------'       |   |    |"
 echo "|   |                    0 -  DESLIGAR   |   |    |"
@@ -46,7 +46,7 @@ echo "|   _____________________________________    | \ "
 echo "|   |   _______________|________   |  - ×|   |  \ "
 echo "|   |   |•___________________- ×|  |     |   |   \ "
 echo "|   |   |                       |  |     |   |    |"
-echo "|   |   | CARRENGANDO ACCLAN..  |  |     |   |    |"
+echo "|   |   | CARRENGANDO ROOTFS-E..|  |     |   |    |"
 echo "|   |   |                       |__|     |   |\   |"
 echo "|   |   |                       ||       |   | \  |"
 echo "|   |   |                       ||       |   |  \ |"
@@ -59,7 +59,7 @@ echo "|   |____________________________°_°_°___|   |    |"
 echo "|                                            |    |"
 echo "=================================================="
 
-    if [ -d /data/data/com.termux/files/home/ACCLAN ]
+    if [ -d /data/data/com.termux/files/home/rootfsEmpty ]
     then
 
         clear
@@ -76,7 +76,7 @@ echo "=================================================="
 
         export LANG=C
 
-        folder=/data/data/com.termux/files/home/ACCLAN
+        folder=/data/data/com.termux/files/home/rootfsEmpty 
 
         echo -e "\x1b[33m [ Mounting system folders ]"
 
@@ -216,7 +216,7 @@ echo "|   |____________________________°_°_°___|   |    |"
 echo "|                                            |    |"
 echo "=================================================="
 
-       sudo touch /data/data/com.termux/files/home/Fex/opt/chroot
+       sudo touch /data/data/com.termux/files/home/rootfsEmpty/opt/chroot
        
        termux-x11 :0 &>/dev/null & pulseaudio --start --load="module-native-protocol-tcp auth-ip-acl=127.0.0.1 auth-anonymous=1" --exit-idle-time=-1 &>/dev/null & sleep 1
 	
@@ -268,6 +268,8 @@ echo "=================================================="
 
         echo -e " \x1b[32m[ Unmounted ]\e[0m"
 
+        sudo umount $folder/tmp
+
 exit 0
 
     else
@@ -289,7 +291,7 @@ echo "|   _____________________________________    | \ "
 echo "|   |   _______________|________   |  - ×|   |  \ "
 echo "|   |   |•___________________- ×|  |     |   |   \ "
 echo "|   |   |                       |  |     |   |    |"
-echo "|   |   | REMOVENDO ACCLAN.. ;-;   |  |     |   |    |"
+echo "|   |   | REMOVENDO ROOTFSEMPTY.|  |     |   |    |"
 echo "|   |   |                       |__|     |   |\   |"
 echo "|   |   |                       ||       |   | \  |"
 echo "|   |   |                       ||       |   |  \ |"
@@ -302,13 +304,23 @@ echo "|   |____________________________°_°_°___|   |    |"
 echo "|                                            |    |"
 echo "=================================================="
 
-if [ -d ~/ACCLAN ]
+if [ -d ~/rootfsEmpty ]
     then
-        sudo rm -rf ~/ACCLAN
-        rm $PREFIX/bin/ACCLAN
+
+        sudo chroot $folder /bin/su - root
+        sudo umount $folder/dev/pts
+        sudo umount $folder/dev
+        sudo umount $folder/proc
+        sudo umount $folder/sdcard
+        sudo umount $folder/sys
+        sudo umount $folder/tmp
+
+        sudo rm -rf ~/rootfsEmpty 
+
+        rm $PREFIX/bin/repy
     else
         proot-distro remove ubuntu &>/dev/null
-        rm $PREFIX/bin/ACCLAN
+        rm $PREFIX/bin/repy
 fi
 
 elif [ $opcao = 3 ]
@@ -322,7 +334,7 @@ echo "|   _____________________________________    | \ "
 echo "|   |   _______________|________   |  - ×|   |  \ "
 echo "|   |   |•___________________- ×|  |     |   |   \ "
 echo "|   |   |                       |  |     |   |    |"
-echo "|   |   | REINSTALANDO ACCLAN   |  |     |   |    |"
+echo "|   |   | OPÇÃO INVÁLIDA ;(     |  |     |   |    |"
 echo "|   |   |                       |__|     |   |\   |"
 echo "|   |   |                       ||       |   | \  |"
 echo "|   |   |                       ||       |   |  \ |"
