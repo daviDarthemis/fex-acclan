@@ -6,6 +6,8 @@ echo "nameserver 8.8.8.8" | tee /etc/resolv.conf > /dev/null
 
 #atualizando base
 
+chmod 777 cd/tmp
+
 apt update
 
 apt upgrade 
