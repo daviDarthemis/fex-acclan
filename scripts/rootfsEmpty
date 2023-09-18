@@ -279,11 +279,11 @@ echo "|   |____________________________°_°_°___|   |    |"
 echo "|                                            |    |"
 echo "=================================================="
 
-curl -O https://raw.githubusercontent.com/OpomboMORTO/fex-acclan/main/scripts/Acclan &>/dev/null
-chmod +x acclan
-mv acclan $PREFIX/bin &>/dev/null
+curl -O https://raw.githubusercontent.com/OpomboMORTO/fex-acclan/main/scripts/repy &>/dev/null
+chmod +x repy
+mv repy $PREFIX/bin &>/dev/null
 
-rm -r acclan &>/dev/null
+rm -r rootfsEmpty &>/dev/null
 
 if [ $opcao = 1 ]
 then
