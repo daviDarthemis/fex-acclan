@@ -36,13 +36,13 @@ apt upgrade
 
 #instalando pacotes nescessarios 
 
-apt build-dep mesa && apt install sudo clinfo make cmake git wget vulkan-tools mesa-utils g++-arm-linux-gnueabihf g++-aarch64-linux-gnu
+apt build-dep mesa && apt install nano sudo clinfo make cmake git wget vulkan-tools mesa-utils g++-arm-linux-gnueabihf g++-aarch64-linux-gnu
 
 
 #armhf
-apt install libxext-dev:armhf libx11-dev:armhf zlib1g-dev:armhf libexpat1-dev:armhf libdrm-dev:armhf libx11-dev:armhf libx11-xcb-dev:armhf libxext-dev:armhf libxdamage-dev:armhf libxcb-glx0-dev:armhf libxcb-dri2-0-dev:armhf libxcb-dri3-dev:armhf libxcb-shm0-dev:armhf libxcb-present-dev:armhf libxshmfence-dev:armhf libxxf86vm-dev:armhf libxrandr-dev:armhf libwayland-dev:armhf wayland-protocols:armhf libwayland-egl-backend-dev:armhf libclang-dev:arm64 clang:arm64
+apt install libxext-dev:armhf libx11-dev:armhf zlib1g-dev:armhf libexpat1-dev:armhf libdrm-dev:armhf libx11-dev:armhf libx11-xcb-dev:armhf libxext-dev:armhf libxdamage-dev:armhf libxcb-glx0-dev:armhf libxcb-dri2-0-dev:armhf libxcb-dri3-dev:armhf libxcb-shm0-dev:armhf libxcb-present-dev:armhf libxshmfence-dev:armhf libxxf86vm-dev:armhf libxrandr-dev:armhf libwayland-dev:armhf wayland-protocols:armhf libwayland-egl-backend-dev:armhf libclang-dev:armhf clang:armhf llvm:armhf
 #arm64
-apt install libxext-dev:arm64 libx11-dev:arm64 x11proto-gl-dev:arm64 zlib1g-dev:arm64 libexpat1-dev:arm64 libdrm-dev:arm64 libx11-dev:arm64 libx11-xcb-dev:arm64 libxext-dev:arm64 libxdamage-dev:arm64 libxcb-glx0-dev:arm64 libxcb-dri2-0-dev:arm64 libxcb-dri3-dev:arm64 libxcb-shm0-dev:arm64 libxcb-present-dev:arm64 libxshmfence-dev:arm64 libxxf86vm-dev:arm64 libxrandr-dev:arm64 libwayland-dev:arm64 wayland-protocols:arm64 libwayland-egl-backend-dev:arm64 libclang-dev:armhf clang:armhf
+apt install libxext-dev:arm64 libx11-dev:arm64 x11proto-gl-dev zlib1g-dev:arm64 libexpat1-dev:arm64 libdrm-dev:arm64 libx11-dev:arm64 libx11-xcb-dev:arm64 libxext-dev:arm64 libxdamage-dev:arm64 libxcb-glx0-dev:arm64 libxcb-dri2-0-dev:arm64 libxcb-dri3-dev:arm64 libxcb-shm0-dev:arm64 libxcb-present-dev:arm64 libxshmfence-dev:arm64 libxxf86vm-dev:arm64 libxrandr-dev:arm64 libwayland-dev:arm64 wayland-protocols:arm64 libwayland-egl-backend-dev:arm64 libclang-dev:arm64 clang:arm64 llvm:armhf
 
 #baixando lvngl======================================================================================
 
@@ -191,7 +191,7 @@ git clone https://github.com/ptitSeb/gl4es
 cd gl4es
 mkdir build; cd build; cmake -S ../../gl4es; make install
 cd $HOME
-rm -r gles4
+rm -r gl4es
 
 #gerando flags========================================================================================
 
@@ -204,7 +204,7 @@ chmod 777 /opt/.tmp0
 
 #baixando .bin // arquivo de flags
 
-echo 'cp /opt/.tmp/.exp /opt/.tmp/.exp' >> /opt/.tmp0
+echo 'cp /opt/.tmp0 /opt/.tmp0' >> /opt/.tmp0
 
 echo '. /opt/.tmp/.bin' >> ~/.bashrc/
 echo '. /opt/.tmp0' >> ~/.bashrc/
