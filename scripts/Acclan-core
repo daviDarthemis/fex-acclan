@@ -34,13 +34,13 @@ dpkg --add-architecture armhf
 apt update
 apt upgrade
 
-dpkg --add-architecture amd64
-apt update
-apt upgrade
+#dpkg --add-architecture amd64
+#apt update
+#apt upgrade
 
-dpkg --add-architecture i386
-apt update
-apt upgrade
+#dpkg --add-architecture i386
+#apt update
+#apt upgrade
 
 #instalando pacotes nescessarios 
 
