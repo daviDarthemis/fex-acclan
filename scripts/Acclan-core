@@ -73,11 +73,11 @@ endian = 'little'
 #compilando lvngl
 
 #arm64
-meson build64/ --prefix /usr  -D x11=enabled -D egl=true -D glx=enabled
+meson build64/ --prefix /usr --libdir lib/aarch64-linux-gnu/ -D x11=enabled -D egl=true -D glx=enabled
 ninja -C build64
 ninja install -C build64
 #armhf
-meson build32/ --cross-file arm.txt --prefix /usr  -D x11=enabled -D egl=true -D glx=enabled
+meson build32/ --cross-file arm.txt --prefix /usr --libdir lib/arm-linux-gnueabihf -D x11=enabled -D egl=true -D glx=enabled
 ninja -C build32
 ninja install -C build32
 
@@ -92,11 +92,33 @@ tar -xf drm-libdrm-2.4.116.tar.gz
 rm drm-libdrm-2.4.116.tar.gz
 cd drm-libdrm-2.4.116
 
+#cross-armhf
+
+echo "\
+[binaries]
+c = 'arm-linux-gnueabihf-gcc'
+
+cpp = 'arm-linux-gnueabihf-g++'
+ar = 'arm-linux-gnueabihf-ar'
+strip = 'arm-linux-gnueabihf-strip'
+pkgconfig = 'arm-linux-gnueabihf-pkg-config'
+
+[host_machine]
+system = 'linux'
+cpu_family = 'arm'
+cpu = 'armv7l'
+endian = 'little'
+" > arm.txt
+
 #compilando drm
 
-meson build64 --prefix /usr -D freedreno=enabled -D freedreno-kgsl=true
+meson build64/ --prefix /usr --libdir lib/aarch64-linux-gnu/ -D freedreno=enabled -D freedreno-kgsl=true
 ninja -C build64
 ninja install -C build64
+
+meson build32/ --cross-file arm.txt --prefix /usr --libdir lib/arm-linux-gnueabihf -D freedreno=enabled -D freedreno-kgsl=true
+ninja -C build32
+ninja install -C build32
 
 #copiando drm
 
