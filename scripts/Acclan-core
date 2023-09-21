@@ -40,6 +40,10 @@ apt upgrade
 apt install libxext-dev:armhf libx11-dev:armhf zlib1g-dev:armhf libexpat1-dev:armhf libdrm-dev:armhf libx11-dev:armhf libx11-xcb-dev:armhf libxext-dev:armhf libxdamage-dev:armhf libxcb-glx0-dev:armhf libxcb-dri2-0-dev:armhf libxcb-dri3-dev:armhf libxcb-shm0-dev:armhf libxcb-present-dev:armhf libxshmfence-dev:armhf libxxf86vm-dev:armhf libxrandr-dev:armhf libwayland-dev:armhf wayland-protocols:armhf libwayland-egl-backend-dev:armhf libclang-dev:armhf clang:armhf llvm:armhf
 #arm64
 apt install libxext-dev:arm64 libx11-dev:arm64 x11proto-gl-dev zlib1g-dev:arm64 libexpat1-dev:arm64 libdrm-dev:arm64 libx11-dev:arm64 libx11-xcb-dev:arm64 libxext-dev:arm64 libxdamage-dev:arm64 libxcb-glx0-dev:arm64 libxcb-dri2-0-dev:arm64 libxcb-dri3-dev:arm64 libxcb-shm0-dev:arm64 libxcb-present-dev:arm64 libxshmfence-dev:arm64 libxxf86vm-dev:arm64 libxrandr-dev:arm64 libwayland-dev:arm64 wayland-protocols:arm64 libwayland-egl-backend-dev:arm64 libclang-dev:arm64 clang:arm64 llvm:arm64
+#amd64
+#apt install libxext-dev:amd64 libx11-dev:amd64 zlib1g-dev:amd64 libexpat1-dev:amd64 libdrm-dev:amd64 libx11-dev:amd64 libx11-xcb-dev:amd64 libxext-dev:amd64 libxdamage-dev:amd64 libxcb-glx0-dev:amd64 libxcb-dri2-0-dev:amd64 libxcb-dri3-dev:amd64 libxcb-shm0-dev:amd64 libxcb-present-dev:amd64 libxshmfence-dev:amd64 libxxf86vm-dev:amd64 libxrandr-dev:amd64 libwayland-dev:amd64 wayland-protocols:amd64 libwayland-egl-backend-dev:amd64 libclang-dev:amd64 clang:amd64 llvm:amd64
+#i386
+#apt install libxext-dev:i386 libx11-dev:i386 zlib1g-dev:i386 libexpat1-dev:i386 libdrm-dev:i386 libx11-dev:i386 libx11-xcb-dev:i386 libxext-dev:i386 libxdamage-dev:i386 libxcb-glx0-dev:i386 libxcb-dri2-0-dev:i386 libxcb-dri3-dev:i386 libxcb-shm0-dev:i386 libxcb-present-dev:i386 libxshmfence-dev:i386 libxxf86vm-dev:i386 libxrandr-dev:i386 libwayland-dev:i386 wayland-protocols:i386 libwayland-egl-backend-dev:i386 libclang-dev:i386 clang:i386 llvm:i386
 
 #meson build-dep
 
