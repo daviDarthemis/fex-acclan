@@ -201,7 +201,7 @@ ninja install -C build64
 
 #cross-armhf
 
-meson build32/ --cross-file armhf.txt --prefix /usr --libdir lib/arm-linux-gnueabihf/ -D platforms=x11 -D gallium-drivers=swrast,virgl,zink,freedreno -D vulkan-drivers=freedreno -D dri3=enabled -D egl=enabled -D gles2=enabled -D glvnd=true -D glx=dri -D libunwind=disabled -D osmesa=true -D shared-glapi=enabled -D microsoft-clc=disabled -D valgrind=disabled -D gles1=disabled -D freedreno-kmds=kgsl,msm -D gallium-extra-hud=true -D glx-direct=true -D vulkan-beta=true -D llvm=enabled -D gallium-opencl=icd -D buildtype=release
+meson build32/ --cross-file armhf.txt --prefix /usr --libdir lib/arm-linux-gnueabihf/ -D platforms=x11 -D gallium-drivers=swrast,virgl,zink,freedreno -D vulkan-drivers=freedreno -D dri3=enabled -D egl=enabled -D gles2=enabled -D glvnd=true -D glx=dri -D libunwind=disabled -D osmesa=true -D shared-glapi=enabled -D microsoft-clc=disabled -D valgrind=disabled -D gles1=disabled -D freedreno-kmds=kgsl,msm -D gallium-extra-hud=true -D glx-direct=true -D vulkan-beta=true -D buildtype=release
 ninja -C build32
 ninja install -C build32
 
@@ -232,14 +232,14 @@ rm -r gl4es
 
 #gerando diretórios 
 
-mkdir /opt/.tmp/
-touch /opt/.tmp0
-chmod 777 /opt/.tmp
-chmod 777 /opt/.tmp0
+#mkdir /opt/.tmp/
+#touch /opt/.tmp0
+#chmod 777 /opt/.tmp
+#chmod 777 /opt/.tmp0
 
 #baixando .bin // arquivo de flags
 
-echo 'cp /opt/.tmp0 /opt/.tmp0' >> /opt/.tmp0
+#echo 'cp /opt/.tmp0 /opt/.tmp0' >> /opt/.tmp0
 
-echo '. /opt/.tmp/.bin' >> ~/.bashrc/
-echo '. /opt/.tmp0' >> ~/.bashrc/
+#echo '. /opt/.tmp/.bin' >> ~/.bashrc/
+#echo '. /opt/.tmp0' >> ~/.bashrc/
