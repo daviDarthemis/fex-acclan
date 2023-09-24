@@ -57,6 +57,10 @@ apt install libxext-dev:arm64 libx11-dev:arm64 x11proto-gl-dev zlib1g-dev:arm64 
 
 apt build-dep mesa && apt install nano sudo clinfo make cmake git wget vulkan-tools mesa-utils g++-arm-linux-gnueabihf g++-aarch64-linux-gnu
 
+#compiladores x86_64 e i386
+
+#apt install g++-i686-linux-gnu g++-x86-64-linux-gnu
+
 #baixando lvngl======================================================================================
 
 wget https://gitlab.freedesktop.org/glvnd/libglvnd/-/archive/v1.7.0/libglvnd-v1.7.0.tar.gz
