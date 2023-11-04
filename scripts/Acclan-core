@@ -103,7 +103,7 @@ rm -r libglvnd-v1.7.0
 
 #baixando drm========================================================================================
 
-wget https://gitlab.freedesktop.org/mesa/drm/-/archive/libdrm-2.4.116/drm-libdrm-2.4.116.tar.gz
+wget https://gitlab.freedesktop.org/mesa/drm/-/archive/libdrm-2.4.117/drm-libdrm-2.4.117.tar.gz
 tar -xf drm-libdrm-2.4.117.tar.gz
 rm drm-libdrm-2.4.117.tar.gz
 cd drm-libdrm-2.4.117
