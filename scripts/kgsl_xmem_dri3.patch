@@ -1,0 +1,786 @@
+diff --git a/src/freedreno/vulkan/tu_device.cc b/src/freedreno/vulkan/tu_device.cc
+index 5450b8beb0d..db11b7d18a1 100644
+--- a/src/freedreno/vulkan/tu_device.cc
++++ b/src/freedreno/vulkan/tu_device.cc
+@@ -2775,6 +2775,14 @@ tu_AllocateMemory(VkDevice _device,
+       uint64_t client_address = 0;
+       BITMASK_ENUM(tu_bo_alloc_flags) alloc_flags = TU_BO_ALLOC_NO_FLAGS;
+ 
++      const VkExportMemoryAllocateInfo *export_info = vk_find_struct_const(
++         pAllocateInfo->pNext, EXPORT_MEMORY_ALLOCATE_INFO);
++      if (export_info && (export_info->handleTypes &
++                          (VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT |
++                           VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT))) {
++         alloc_flags |= TU_BO_ALLOC_SHAREABLE;
++      }
++
+       const VkMemoryOpaqueCaptureAddressAllocateInfo *replay_info =
+          vk_find_struct_const(pAllocateInfo->pNext,
+                               MEMORY_OPAQUE_CAPTURE_ADDRESS_ALLOCATE_INFO);
+diff --git a/src/freedreno/vulkan/tu_knl.h b/src/freedreno/vulkan/tu_knl.h
+index 52d11be8f30..a826151b213 100644
+--- a/src/freedreno/vulkan/tu_knl.h
++++ b/src/freedreno/vulkan/tu_knl.h
+@@ -22,6 +22,7 @@ enum tu_bo_alloc_flags
+    TU_BO_ALLOC_GPU_READ_ONLY = 1 << 1,
+    TU_BO_ALLOC_REPLAYABLE = 1 << 2,
+    TU_BO_ALLOC_INTERNAL_RESOURCE = 1 << 3,
++   TU_BO_ALLOC_SHAREABLE = 1 << 4,
+ };
+ 
+ /* Define tu_timeline_sync type based on drm syncobj for a point type
+@@ -54,6 +55,7 @@ struct tu_bo {
+    uint32_t bo_list_idx;
+ 
+    bool implicit_sync : 1;
++   int dmabuf_fd;
+ };
+ 
+ struct tu_knl {
+diff --git a/src/freedreno/vulkan/tu_knl_kgsl.cc b/src/freedreno/vulkan/tu_knl_kgsl.cc
+index 36358de41e1..a22801925b1 100644
+--- a/src/freedreno/vulkan/tu_knl_kgsl.cc
++++ b/src/freedreno/vulkan/tu_knl_kgsl.cc
+@@ -11,6 +11,7 @@
+ #include <stdint.h>
+ #include <sys/ioctl.h>
+ #include <sys/mman.h>
++#include <linux/dma-heap.h>
+ 
+ #include "msm_kgsl.h"
+ #include "vk_util.h"
+@@ -18,6 +19,7 @@
+ #include "util/u_debug.h"
+ #include "util/u_vector.h"
+ #include "util/libsync.h"
++#include "util/os_file.h"
+ #include "util/timespec.h"
+ 
+ #include "tu_cmd_buffer.h"
+@@ -68,6 +70,57 @@ kgsl_submitqueue_close(struct tu_device *dev, uint32_t queue_id)
+    safe_ioctl(dev->physical_device->local_fd, IOCTL_KGSL_DRAWCTXT_DESTROY, &req);
+ }
+ 
++static int
++dmabuf_alloc(uint64_t size)
++{
++   int ret;
++   int dma_heap = open("/dev/dma_heap/system", O_RDONLY);
++
++   if (dma_heap < 0) {
++      int ion_heap = open("/dev/ion", O_RDONLY);
++
++      if (ion_heap < 0)
++         return -1;
++
++      struct ion_allocation_data {
++         __u64 len;
++         __u32 heap_id_mask;
++         __u32 flags;
++         __u32 fd;
++         __u32 unused;
++      } alloc_data = {
++         .len = size,
++         /* ION_HEAP_SYSTEM | ION_SYSTEM_HEAP_ID */
++         .heap_id_mask = (1U << 0) | (1U << 25),
++         .flags = 0, /* uncached */
++      };
++
++      ret = safe_ioctl(ion_heap, _IOWR('I', 0, struct ion_allocation_data),
++                      &alloc_data);
++
++      close(ion_heap);
++
++      if (ret)
++         return -1;
++
++      return alloc_data.fd;
++   } else {
++      struct dma_heap_allocation_data alloc_data = {
++         .len = size,
++         .fd_flags = O_RDWR | O_CLOEXEC,
++      };
++
++      ret = safe_ioctl(dma_heap, DMA_HEAP_IOCTL_ALLOC, &alloc_data);
++
++      close(dma_heap);
++
++      if (ret)
++         return -1;
++
++      return alloc_data.fd;
++   }
++}
++
+ static VkResult
+ kgsl_bo_init(struct tu_device *dev,
+              struct tu_bo **out_bo,
+@@ -79,6 +132,21 @@ kgsl_bo_init(struct tu_device *dev,
+ {
+    assert(client_iova == 0);
+ 
++   if (flags & TU_BO_ALLOC_SHAREABLE) {
++      int fd = dmabuf_alloc(size);
++
++      if (fd < 0) {
++         return vk_errorf(dev, VK_ERROR_OUT_OF_DEVICE_MEMORY,
++                       "DMABUF_ALLOC failed (%s)", strerror(errno));
++      }
++
++      VkResult res = tu_bo_init_dmabuf(dev, out_bo, size, fd);
++
++      close(fd);
++
++      return res;
++   }
++
+    struct kgsl_gpumem_alloc_id req = {
+       .size = size,
+    };
+@@ -114,6 +182,7 @@ kgsl_bo_init(struct tu_device *dev,
+       .iova = req.gpuaddr,
+       .name = tu_debug_bos_add(dev, req.mmapsize, name),
+       .refcnt = 1,
++      .dmabuf_fd = -1,
+    };
+ 
+    *out_bo = bo;
+@@ -169,6 +238,7 @@ kgsl_bo_init_dmabuf(struct tu_device *dev,
+       .iova = info_req.gpuaddr,
+       .name = tu_debug_bos_add(dev, info_req.size, "dmabuf"),
+       .refcnt = 1,
++      .dmabuf_fd = os_dupfd_cloexec(fd),
+    };
+ 
+    *out_bo = bo;
+@@ -179,9 +249,7 @@ kgsl_bo_init_dmabuf(struct tu_device *dev,
+ static int
+ kgsl_bo_export_dmabuf(struct tu_device *dev, struct tu_bo *bo)
+ {
+-   tu_stub();
+-
+-   return -1;
++   return os_dupfd_cloexec(bo->dmabuf_fd);
+ }
+ 
+ static VkResult
+@@ -190,6 +258,15 @@ kgsl_bo_map(struct tu_device *dev, struct tu_bo *bo)
+    if (bo->map)
+       return VK_SUCCESS;
+ 
++   if (bo->dmabuf_fd != -1) {
++      void *map = mmap(0, bo->size, PROT_READ | PROT_WRITE, MAP_SHARED, bo->dmabuf_fd, 0);
++
++      if (map != MAP_FAILED) {
++         bo->map = map;
++         return VK_SUCCESS;
++      }
++   }
++
+    uint64_t offset = bo->gem_handle << 12;
+    void *map = mmap(0, bo->size, PROT_READ | PROT_WRITE, MAP_SHARED,
+                     dev->physical_device->local_fd, offset);
+@@ -219,7 +296,9 @@ kgsl_bo_finish(struct tu_device *dev, struct tu_bo *bo)
+       TU_RMV(bo_unmap, dev, bo);
+       munmap(bo->map, bo->size);
+    }
+-
++   if (bo->dmabuf_fd != -1)
++   	  close(bo->dmabuf_fd);
++   	
+    TU_RMV(bo_destroy, dev, bo);
+ 
+    struct kgsl_gpumem_free_id req = {
+diff --git a/src/freedreno/vulkan/tu_wsi.cc b/src/freedreno/vulkan/tu_wsi.cc
+index 1f3d7e2ecc4..79476d742e9 100644
+--- a/src/freedreno/vulkan/tu_wsi.cc
++++ b/src/freedreno/vulkan/tu_wsi.cc
+@@ -25,8 +25,11 @@ static bool
+ tu_wsi_can_present_on_device(VkPhysicalDevice physicalDevice, int fd)
+ {
+    VK_FROM_HANDLE(tu_physical_device, pdevice, physicalDevice);
+-
++   #ifdef HAVE_LIBDRM
+    return wsi_common_drm_devices_equal(fd, pdevice->local_fd);
++   #else
++   return true;
++   #endif
+ }
+ 
+ VkResult
+diff --git a/src/vulkan/wsi/wsi_common.c b/src/vulkan/wsi/wsi_common.c
+index 2b7d8717e19..b61869003d3 100644
+--- a/src/vulkan/wsi/wsi_common.c
++++ b/src/vulkan/wsi/wsi_common.c
+@@ -47,6 +47,377 @@
+ #include <unistd.h>
+ #endif
+ 
++#ifndef HAVE_LIBDRM
++
++#include "drm-uapi/drm_fourcc.h"
++#include <sys/ioctl.h>
++#include <sys/mman.h>
++#include <linux/dma-heap.h>
++#include <fcntl.h>
++
++#define WSI_PRIME_LINEAR_STRIDE_ALIGN 256
++
++bool
++wsi_drm_image_needs_buffer_blit(const struct wsi_device *wsi,
++                                const struct wsi_drm_image_params *params)
++{
++   bool needed;
++   if (!params->same_gpu)
++      needed = true;
++
++   if (params->num_modifier_lists > 0 || wsi->supports_scanout)
++      needed = false;
++   return needed;   
++}
++
++static uint32_t
++prime_select_buffer_memory_type(const struct wsi_device *wsi,
++                                uint32_t type_bits)
++{
++   return wsi_select_memory_type(wsi, 0 /* req_props */,
++                                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
++                                 type_bits);
++}
++
++static VkResult
++wsi_init_image_dmabuf_fd(const struct wsi_swapchain *chain,
++                          struct wsi_image *image,
++                          bool linear)
++{
++   const struct wsi_device *wsi = chain->wsi;
++   const VkMemoryGetFdInfoKHR memory_get_fd_info = {
++      .sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR,
++      .pNext = NULL,
++      .memory = linear ? image->blit.memory : image->memory,
++      .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT,
++   };
++
++   return wsi->GetMemoryFdKHR(chain->device, &memory_get_fd_info,
++                              &image->dma_buf_fd);
++}
++
++static VkResult
++wsi_create_prime_image_mem(const struct wsi_swapchain *chain,
++                           const struct wsi_image_info *info,
++                           struct wsi_image *image)
++{
++   VkResult result =
++      wsi_create_buffer_blit_context(chain, info, image,
++                                     VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT);
++   if (result != VK_SUCCESS)
++      return result;
++
++   result = wsi_init_image_dmabuf_fd(chain, image, true);
++   if (result != VK_SUCCESS)
++      return result;
++
++   image->drm_modifier = info->prime_use_linear_modifier ?
++                         DRM_FORMAT_MOD_LINEAR : DRM_FORMAT_MOD_INVALID;
++
++   return VK_SUCCESS;
++}
++
++static VkResult
++wsi_configure_prime_image(UNUSED const struct wsi_swapchain *chain,
++                          const VkSwapchainCreateInfoKHR *pCreateInfo,
++                          const struct wsi_drm_image_params *params,
++                          struct wsi_image_info *info)
++{
++   bool use_modifier = params->num_modifier_lists > 0;
++   wsi_memory_type_select_cb select_buffer_memory_type =
++      params->same_gpu ? wsi_select_device_memory_type :
++                           prime_select_buffer_memory_type;
++
++   VkResult result = wsi_configure_image(chain, pCreateInfo,
++                                         0 /* handle_types */, info);
++   if (result != VK_SUCCESS)
++      return result;
++
++   info->explicit_sync = params->explicit_sync;
++
++   wsi_configure_buffer_image(chain, pCreateInfo,
++                              WSI_PRIME_LINEAR_STRIDE_ALIGN, 4096,
++                              info);
++   info->prime_use_linear_modifier = use_modifier;
++
++   info->create_mem = wsi_create_prime_image_mem;
++   info->select_blit_dst_memory_type = select_buffer_memory_type;
++   info->select_image_memory_type = wsi_select_device_memory_type;
++
++   return VK_SUCCESS;
++}
++
++static const struct VkDrmFormatModifierPropertiesEXT *
++get_modifier_props(const struct wsi_image_info *info, uint64_t modifier)
++{
++   for (uint32_t i = 0; i < info->modifier_prop_count; i++) {
++      if (info->modifier_props[i].drmFormatModifier == modifier)
++         return &info->modifier_props[i];
++   }
++   return NULL;
++}
++
++static VkResult
++wsi_create_native_image_mem(const struct wsi_swapchain *chain,
++                            const struct wsi_image_info *info,
++                            struct wsi_image *image)
++{
++   const struct wsi_device *wsi = chain->wsi;
++   VkResult result;
++
++   VkMemoryRequirements reqs;
++   wsi->GetImageMemoryRequirements(chain->device, image->image, &reqs);
++
++   const struct wsi_memory_allocate_info memory_wsi_info = {
++      .sType = VK_STRUCTURE_TYPE_WSI_MEMORY_ALLOCATE_INFO_MESA,
++      .pNext = NULL,
++      .implicit_sync = !info->explicit_sync,
++   };
++   const VkExportMemoryAllocateInfo memory_export_info = {
++      .sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO,
++      .pNext = &memory_wsi_info,
++      .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT,
++   };
++   const VkMemoryDedicatedAllocateInfo memory_dedicated_info = {
++      .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO,
++      .pNext = &memory_export_info,
++      .image = image->image,
++      .buffer = VK_NULL_HANDLE,
++   };
++   const VkMemoryAllocateInfo memory_info = {
++      .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
++      .pNext = &memory_dedicated_info,
++      .allocationSize = reqs.size,
++      .memoryTypeIndex =
++         wsi_select_device_memory_type(wsi, reqs.memoryTypeBits),
++   };
++   result = wsi->AllocateMemory(chain->device, &memory_info,
++                                &chain->alloc, &image->memory);
++   if (result != VK_SUCCESS)
++      return result;
++
++   result = wsi_init_image_dmabuf_fd(chain, image, false);
++   if (result != VK_SUCCESS)
++      return result;
++
++   if (info->drm_mod_list.drmFormatModifierCount > 0) {
++      VkImageDrmFormatModifierPropertiesEXT image_mod_props = {
++         .sType = VK_STRUCTURE_TYPE_IMAGE_DRM_FORMAT_MODIFIER_PROPERTIES_EXT,
++      };
++      result = wsi->GetImageDrmFormatModifierPropertiesEXT(chain->device,
++                                                           image->image,
++                                                           &image_mod_props);
++      if (result != VK_SUCCESS)
++         return result;
++
++      image->drm_modifier = image_mod_props.drmFormatModifier;
++      assert(image->drm_modifier != DRM_FORMAT_MOD_INVALID);
++
++      const struct VkDrmFormatModifierPropertiesEXT *mod_props =
++         get_modifier_props(info, image->drm_modifier);
++      image->num_planes = mod_props->drmFormatModifierPlaneCount;
++
++      for (uint32_t p = 0; p < image->num_planes; p++) {
++         const VkImageSubresource image_subresource = {
++            .aspectMask = VK_IMAGE_ASPECT_PLANE_0_BIT << p,
++            .mipLevel = 0,
++            .arrayLayer = 0,
++         };
++         VkSubresourceLayout image_layout;
++         wsi->GetImageSubresourceLayout(chain->device, image->image,
++                                        &image_subresource, &image_layout);
++         image->sizes[p] = image_layout.size;
++         image->row_pitches[p] = image_layout.rowPitch;
++         image->offsets[p] = image_layout.offset;
++      }
++   } else {
++      const VkImageSubresource image_subresource = {
++         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
++         .mipLevel = 0,
++         .arrayLayer = 0,
++      };
++      VkSubresourceLayout image_layout;
++      wsi->GetImageSubresourceLayout(chain->device, image->image,
++                                     &image_subresource, &image_layout);
++
++      image->drm_modifier = DRM_FORMAT_MOD_INVALID;
++      image->num_planes = 1;
++      image->sizes[0] = reqs.size;
++      image->row_pitches[0] = image_layout.rowPitch;
++      image->offsets[0] = 0;
++   }
++
++   return VK_SUCCESS;
++}
++
++static VkResult
++wsi_configure_native_image(const struct wsi_swapchain *chain,
++                           const VkSwapchainCreateInfoKHR *pCreateInfo,
++                           const struct wsi_drm_image_params *params,
++                           struct wsi_image_info *info)
++{
++   const struct wsi_device *wsi = chain->wsi;
++
++   VkExternalMemoryHandleTypeFlags handle_type =
++      VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
++
++   VkResult result = wsi_configure_image(chain, pCreateInfo, handle_type, info);
++   if (result != VK_SUCCESS)
++      return result;
++
++   info->explicit_sync = params->explicit_sync;
++
++   if (params->num_modifier_lists == 0) {
++      /* If we don't have modifiers, fall back to the legacy "scanout" flag */
++      info->wsi.scanout = true;
++   } else {
++      /* The winsys can't request modifiers if we don't support them. */
++      assert(wsi->supports_modifiers);
++      struct VkDrmFormatModifierPropertiesListEXT modifier_props_list = {
++         .sType = VK_STRUCTURE_TYPE_DRM_FORMAT_MODIFIER_PROPERTIES_LIST_EXT,
++      };
++      VkFormatProperties2 format_props = {
++         .sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2,
++         .pNext = &modifier_props_list,
++      };
++      wsi->GetPhysicalDeviceFormatProperties2(wsi->pdevice,
++                                              pCreateInfo->imageFormat,
++                                              &format_props);
++      assert(modifier_props_list.drmFormatModifierCount > 0);
++      info->modifier_props =
++         vk_alloc(&chain->alloc,
++                  sizeof(*info->modifier_props) *
++                  modifier_props_list.drmFormatModifierCount,
++                  8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
++      if (info->modifier_props == NULL)
++         goto fail_oom;
++
++      modifier_props_list.pDrmFormatModifierProperties = info->modifier_props;
++      wsi->GetPhysicalDeviceFormatProperties2(wsi->pdevice,
++                                              pCreateInfo->imageFormat,
++                                              &format_props);
++
++      /* Call GetImageFormatProperties with every modifier and filter the list
++       * down to those that we know work.
++       */
++      info->modifier_prop_count = 0;
++      for (uint32_t i = 0; i < modifier_props_list.drmFormatModifierCount; i++) {
++         VkPhysicalDeviceImageDrmFormatModifierInfoEXT mod_info = {
++            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_DRM_FORMAT_MODIFIER_INFO_EXT,
++            .drmFormatModifier = info->modifier_props[i].drmFormatModifier,
++            .sharingMode = pCreateInfo->imageSharingMode,
++            .queueFamilyIndexCount = pCreateInfo->queueFamilyIndexCount,
++            .pQueueFamilyIndices = pCreateInfo->pQueueFamilyIndices,
++         };
++         VkPhysicalDeviceImageFormatInfo2 format_info = {
++            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2,
++            .format = pCreateInfo->imageFormat,
++            .type = VK_IMAGE_TYPE_2D,
++            .tiling = VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT,
++            .usage = pCreateInfo->imageUsage,
++            .flags = info->create.flags,
++         };
++
++         VkImageFormatListCreateInfo format_list;
++         if (info->create.flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) {
++            format_list = info->format_list;
++            format_list.pNext = NULL;
++            __vk_append_struct(&format_info, &format_list);
++         }
++
++         struct wsi_image_create_info wsi_info = (struct wsi_image_create_info) {
++            .sType = VK_STRUCTURE_TYPE_WSI_IMAGE_CREATE_INFO_MESA,
++            .pNext = NULL,
++         };
++         __vk_append_struct(&format_info, &wsi_info);
++
++         VkImageFormatProperties2 format_props = {
++            .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2,
++            .pNext = NULL,
++         };
++         __vk_append_struct(&format_info, &mod_info);
++         result = wsi->GetPhysicalDeviceImageFormatProperties2(wsi->pdevice,
++                                                               &format_info,
++                                                               &format_props);
++         if (result == VK_SUCCESS &&
++             pCreateInfo->imageExtent.width <= format_props.imageFormatProperties.maxExtent.width &&
++             pCreateInfo->imageExtent.height <= format_props.imageFormatProperties.maxExtent.height)
++            info->modifier_props[info->modifier_prop_count++] = info->modifier_props[i];
++      }
++
++      uint32_t max_modifier_count = 0;
++      for (uint32_t l = 0; l < params->num_modifier_lists; l++)
++         max_modifier_count = MAX2(max_modifier_count, params->num_modifiers[l]);
++
++      uint64_t *image_modifiers =
++         vk_alloc(&chain->alloc, sizeof(*image_modifiers) * max_modifier_count,
++                  8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
++      if (!image_modifiers)
++         goto fail_oom;
++
++      uint32_t image_modifier_count = 0;
++      for (uint32_t l = 0; l < params->num_modifier_lists; l++) {
++         /* Walk the modifier lists and construct a list of supported
++          * modifiers.
++          */
++         for (uint32_t i = 0; i < params->num_modifiers[l]; i++) {
++            if (get_modifier_props(info, params->modifiers[l][i]))
++               image_modifiers[image_modifier_count++] = params->modifiers[l][i];
++         }
++
++         /* We only want to take the modifiers from the first list */
++         if (image_modifier_count > 0)
++            break;
++      }
++
++      if (image_modifier_count > 0) {
++         info->create.tiling = VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT;
++         info->drm_mod_list = (VkImageDrmFormatModifierListCreateInfoEXT) {
++            .sType = VK_STRUCTURE_TYPE_IMAGE_DRM_FORMAT_MODIFIER_LIST_CREATE_INFO_EXT,
++            .drmFormatModifierCount = image_modifier_count,
++            .pDrmFormatModifiers = image_modifiers,
++         };
++         image_modifiers = NULL;
++         __vk_append_struct(&info->create, &info->drm_mod_list);
++      } else {
++         vk_free(&chain->alloc, image_modifiers);
++         /* TODO: Add a proper error here */
++         assert(!"Failed to find a supported modifier!  This should never "
++                 "happen because LINEAR should always be available");
++         goto fail_oom;
++      }
++   }
++
++   info->create_mem = wsi_create_native_image_mem;
++
++   return VK_SUCCESS;
++
++fail_oom:
++   wsi_destroy_image_info(chain, info);
++   return VK_ERROR_OUT_OF_HOST_MEMORY;
++}
++
++VkResult
++wsi_drm_configure_image(const struct wsi_swapchain *chain,
++                        const VkSwapchainCreateInfoKHR *pCreateInfo,
++                        const struct wsi_drm_image_params *params,
++                        struct wsi_image_info *info)
++{
++   assert(params->base.image_type == WSI_IMAGE_TYPE_DRM);
++
++   if (chain->blit.type == WSI_SWAPCHAIN_BUFFER_BLIT) {
++      return wsi_configure_prime_image(chain, pCreateInfo,
++                                       params,
++                                       info);
++   } else {
++      return wsi_configure_native_image(chain, pCreateInfo,
++                                        params,
++                                        info);
++   }
++}
++
++#endif
++
+ uint64_t WSI_DEBUG;
+ 
+ static const struct debug_control debug_control[] = {
+@@ -345,14 +716,12 @@ get_blit_type(const struct wsi_device *wsi,
+       return wsi_cpu_image_needs_buffer_blit(wsi, cpu_params) ?
+          WSI_SWAPCHAIN_BUFFER_BLIT : WSI_SWAPCHAIN_NO_BLIT;
+    }
+-#ifdef HAVE_LIBDRM
+    case WSI_IMAGE_TYPE_DRM: {
+       const struct wsi_drm_image_params *drm_params =
+          container_of(params, const struct wsi_drm_image_params, base);
+       return wsi_drm_image_needs_buffer_blit(wsi, drm_params) ?
+          WSI_SWAPCHAIN_BUFFER_BLIT : WSI_SWAPCHAIN_NO_BLIT;
+    }
+-#endif
+ #ifdef _WIN32
+    case WSI_IMAGE_TYPE_DXGI: {
+       const struct wsi_dxgi_image_params *dxgi_params =
+@@ -378,13 +747,11 @@ configure_image(const struct wsi_swapchain *chain,
+          container_of(params, const struct wsi_cpu_image_params, base);
+       return wsi_configure_cpu_image(chain, pCreateInfo, cpu_params, info);
+    }
+-#ifdef HAVE_LIBDRM
+    case WSI_IMAGE_TYPE_DRM: {
+       const struct wsi_drm_image_params *drm_params =
+          container_of(params, const struct wsi_drm_image_params, base);
+       return wsi_drm_configure_image(chain, pCreateInfo, drm_params, info);
+    }
+-#endif
+ #ifdef _WIN32
+    case WSI_IMAGE_TYPE_DXGI: {
+       const struct wsi_dxgi_image_params *dxgi_params =
+@@ -1545,7 +1912,7 @@ wsi_common_queue_present(const struct wsi_device *wsi,
+ #endif
+       }
+ 
+-      if (wsi->sw)
++      if (wsi->sw || swapchain->present_mode == VK_PRESENT_MODE_IMMEDIATE_KHR)
+ 	      wsi->WaitForFences(device, 1, &swapchain->fences[image_index],
+ 				 true, ~0ull);
+ 
+diff --git a/src/vulkan/wsi/wsi_common_drm.c b/src/vulkan/wsi/wsi_common_drm.c
+index 474e59f88bd..98c395c141c 100644
+--- a/src/vulkan/wsi/wsi_common_drm.c
++++ b/src/vulkan/wsi/wsi_common_drm.c
+@@ -45,6 +45,9 @@
+ static VkResult
+ wsi_dma_buf_export_sync_file(int dma_buf_fd, int *sync_file_fd)
+ {
++#if defined (__ANDROID__) && defined (__TERMUX__)
++   return VK_ERROR_FEATURE_NOT_PRESENT;
++#else
+    /* Don't keep trying an IOCTL that doesn't exist. */
+    static bool no_dma_buf_sync_file = false;
+    if (no_dma_buf_sync_file)
+@@ -68,11 +71,15 @@ wsi_dma_buf_export_sync_file(int dma_buf_fd, int *sync_file_fd)
+    *sync_file_fd = export.fd;
+ 
+    return VK_SUCCESS;
++#endif
+ }
+ 
+ static VkResult
+ wsi_dma_buf_import_sync_file(int dma_buf_fd, int sync_file_fd)
+ {
++#if defined (__ANDROID__) && defined (__TERMUX__)
++   return VK_ERROR_FEATURE_NOT_PRESENT;
++#else
+    /* Don't keep trying an IOCTL that doesn't exist. */
+    static bool no_dma_buf_sync_file = false;
+    if (no_dma_buf_sync_file)
+@@ -94,6 +101,7 @@ wsi_dma_buf_import_sync_file(int dma_buf_fd, int sync_file_fd)
+    }
+ 
+    return VK_SUCCESS;
++#endif
+ }
+ 
+ static VkResult
+diff --git a/src/vulkan/wsi/wsi_common_x11.c b/src/vulkan/wsi/wsi_common_x11.c
+index 29b123e624e..46d2409988c 100644
+--- a/src/vulkan/wsi/wsi_common_x11.c
++++ b/src/vulkan/wsi/wsi_common_x11.c
+@@ -156,8 +156,11 @@ wsi_x11_check_dri3_compatible(const struct wsi_device *wsi_dev,
+    int dri3_fd = wsi_dri3_open(conn, screen->root, None);
+    if (dri3_fd == -1)
+       return true;
+-
++   #ifdef HAVE_LIBDRM
+    bool match = wsi_device_matches_drm_fd(wsi_dev, dri3_fd);
++   #else
++   bool match = true;
++   #endif
+ 
+    close(dri3_fd);
+ 
+@@ -447,7 +450,7 @@ wsi_x11_get_connection(struct wsi_device *wsi_dev,
+ 
+ static const VkFormat formats[] = {
+    VK_FORMAT_R5G6B5_UNORM_PACK16,
+-   VK_FORMAT_B8G8R8A8_SRGB,
++   // VK_FORMAT_B8G8R8A8_SRGB,
+    VK_FORMAT_B8G8R8A8_UNORM,
+    VK_FORMAT_A2R10G10B10_UNORM_PACK32,
+ };
+@@ -1239,13 +1242,16 @@ x11_wait_for_explicit_sync_release_submission(struct x11_swapchain *chain,
+    STACK_ARRAY(struct wsi_image*, images, chain->base.image_count);
+    for (uint32_t i = 0; i < chain->base.image_count; i++)
+       images[i] = &chain->images[i].base;
+-
++   #ifdef HAVE_LIBDRM
+    VkResult result =
+       wsi_drm_wait_for_explicit_sync_release(&chain->base,
+                                              chain->base.image_count,
+                                              images,
+                                              rel_timeout_ns,
+                                              image_index);
++   #else
++   VkResult result = VK_SUCCESS;
++   #endif                                          
+    STACK_ARRAY_FINISH(images);
+    return result;
+ }
+@@ -1391,7 +1397,7 @@ x11_present_to_x11_dri3(struct x11_swapchain *chain, uint32_t image_index,
+       options |= XCB_PRESENT_OPTION_SUBOPTIMAL;
+ #endif
+ 
+-   xshmfence_reset(image->shm_fence);
++   //xshmfence_reset(image->shm_fence);
+ 
+    if (!chain->base.image_info.explicit_sync) {
+       ++chain->sent_image_count;
+@@ -1743,9 +1749,9 @@ x11_acquire_next_image(struct wsi_swapchain *anv_chain,
+       return result;
+ 
+    assert(*image_index < chain->base.image_count);
+-   if (chain->images[*image_index].shm_fence &&
++   /*if (chain->images[*image_index].shm_fence &&
+        !chain->base.image_info.explicit_sync)
+-      xshmfence_await(chain->images[*image_index].shm_fence);
++      xshmfence_await(chain->images[*image_index].shm_fence);*/
+ 
+    return result;
+ }
+@@ -2111,14 +2117,23 @@ x11_image_init(VkDevice device_h, struct x11_swapchain *chain,
+          return VK_ERROR_OUT_OF_HOST_MEMORY;
+ 
+       cookie =
+-         xcb_dri3_pixmap_from_buffer_checked(chain->conn,
+-                                             image->pixmap,
+-                                             chain->window,
+-                                             image->base.sizes[0],
+-                                             pCreateInfo->imageExtent.width,
+-                                             pCreateInfo->imageExtent.height,
+-                                             image->base.row_pitches[0],
+-                                             chain->depth, bpp, fd);
++         xcb_dri3_pixmap_from_buffers_checked(chain->conn,
++                                              image->pixmap,
++                                              chain->window,
++                                              image->base.num_planes,
++                                              pCreateInfo->imageExtent.width,
++                                              pCreateInfo->imageExtent.height,
++                                              image->base.row_pitches[0],
++                                              image->base.offsets[0],
++                                              0,
++                                              0,
++                                              0,
++                                              0,
++                                              0,
++                                              0,
++                                              chain->depth, bpp,
++                                              1274,
++                                              &fd);
+    }
+ 
+    error = xcb_request_check(chain->conn, cookie);
+@@ -2148,6 +2163,9 @@ x11_image_init(VkDevice device_h, struct x11_swapchain *chain,
+    }
+ #endif
+ 
++image->sync_fence = 0;
++return VK_SUCCESS;
++
+ out_fence:
+    fence_fd = xshmfence_alloc_shm();
+    if (fence_fd < 0)
+@@ -2189,10 +2207,6 @@ x11_image_finish(struct x11_swapchain *chain,
+    xcb_void_cookie_t cookie;
+ 
+    if (!chain->base.wsi->sw || chain->has_mit_shm) {
+-      cookie = xcb_sync_destroy_fence(chain->conn, image->sync_fence);
+-      xcb_discard_reply(chain->conn, cookie.sequence);
+-      xshmfence_unmap_shm(image->shm_fence);
+-
+       cookie = xcb_free_pixmap(chain->conn, image->pixmap);
+       xcb_discard_reply(chain->conn, cookie.sequence);
+ 
